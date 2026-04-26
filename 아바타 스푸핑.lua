@@ -1,0 +1,307 @@
+-- ╔══════════════════════════════════════════════════════╗
+-- ║         Avatar Spoofer  ·  by zxc_auraic             ║
+-- ║              (Claude Sonnet 4.6)                     ║
+-- ╚══════════════════════════════════════════════════════╝
+-- LocalScript
+
+local Players         = game:GetService("Players")
+local TweenService    = game:GetService("TweenService")
+local RunService      = game:GetService("RunService")
+local UserInputService= game:GetService("UserInputService")
+
+local speaker = Players.LocalPlayer
+
+local spoofActive   = false
+local spoofConn     = nil
+local currentTarget = ""
+
+local function SpoofAvatar(username)
+    local char     = speaker.Character
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    local ok1, targetId = pcall(Players.GetUserIdFromNameAsync, Players, username)
+    if not ok1 then warn("[Spoofer] ID 조회 실패:", targetId) return end
+
+    local ok2, targetDesc = pcall(Players.GetHumanoidDescriptionFromUserIdAsync, Players, targetId)
+    if not ok2 then warn("[Spoofer] 설명 조회 실패:", targetDesc) return end
+
+    local cur = humanoid:GetAppliedDescription()
+    targetDesc.HeightScale     = cur.HeightScale
+    targetDesc.WidthScale      = cur.WidthScale
+    targetDesc.DepthScale      = cur.DepthScale
+    targetDesc.HeadScale       = cur.HeadScale
+    targetDesc.ProportionScale = cur.ProportionScale
+    targetDesc.BodyTypeScale   = cur.BodyTypeScale
+
+    for _, item in ipairs(char:GetChildren()) do
+        if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") then
+            item:Destroy()
+        end
+    end
+
+    local ok3 = pcall(humanoid.ApplyDescriptionClientServer, humanoid, targetDesc)
+    if not ok3 then
+        pcall(humanoid.ApplyDescriptionResetAsync, humanoid, targetDesc)
+    end
+end
+
+local function StartSpoof(username)
+    currentTarget = username
+    spoofActive   = true
+    SpoofAvatar(username)
+    if spoofConn then spoofConn:Disconnect() end
+    spoofConn = speaker.CharacterAdded:Connect(function()
+        if spoofActive then
+            task.wait(1)
+            SpoofAvatar(currentTarget)
+        end
+    end)
+end
+
+local function StopSpoof()
+    spoofActive = false
+    if spoofConn then spoofConn:Disconnect(); spoofConn = nil end
+end
+
+local C = {
+    bg        = Color3.fromRGB(18,  22,  38),
+    panel     = Color3.fromRGB(28,  34,  58),
+    frost     = Color3.fromRGB(190, 210, 255),
+    ice1      = Color3.fromRGB(140, 190, 255),
+    ice2      = Color3.fromRGB(170, 140, 255),
+    accent    = Color3.fromRGB(100, 200, 255),
+    text      = Color3.fromRGB(215, 225, 255),
+    subtext   = Color3.fromRGB(140, 155, 200),
+    on        = Color3.fromRGB( 80, 220, 180),
+    off       = Color3.fromRGB(220,  80, 100),
+    inputBg   = Color3.fromRGB(22,  28,  50),
+}
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name           = "AuraicSpoofUI"
+ScreenGui.ResetOnSpawn   = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent         = game:GetService("CoreGui")
+
+local Frame = Instance.new("Frame")
+Frame.Size             = UDim2.new(0, 300, 0, 200)
+Frame.Position         = UDim2.new(0.5, -150, 0.5, -100)
+Frame.BackgroundColor3 = C.panel
+Frame.BackgroundTransparency = 0.18
+Frame.BorderSizePixel  = 0
+Frame.Active           = true
+Frame.Parent           = ScreenGui
+
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 16)
+
+local PanelGrad = Instance.new("UIGradient")
+PanelGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,   Color3.fromRGB(25, 32, 60)),
+    ColorSequenceKeypoint.new(1,   Color3.fromRGB(18, 22, 45)),
+})
+PanelGrad.Rotation = 135
+PanelGrad.Parent   = Frame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Thickness       = 1.5
+Stroke.Color           = C.ice1
+Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+Stroke.Parent          = Frame
+
+local Shine = Instance.new("Frame")
+Shine.Size             = UDim2.new(0.7, 0, 0, 1)
+Shine.Position         = UDim2.new(0.15, 0, 0, 6)
+Shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Shine.BackgroundTransparency = 0.6
+Shine.BorderSizePixel  = 0
+Shine.Parent           = Frame
+Instance.new("UICorner", Shine).CornerRadius = UDim.new(1, 0)
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size               = UDim2.new(1, 0, 0, 32)
+TitleLabel.Position           = UDim2.new(0, 0, 0, 8)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text               = "Avatar Spoofer"
+TitleLabel.TextColor3         = C.frost
+TitleLabel.TextSize           = 17
+TitleLabel.Font               = Enum.Font.GothamBold
+TitleLabel.Parent             = Frame
+
+local TitleGrad = Instance.new("UIGradient")
+TitleGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,   C.ice1),
+    ColorSequenceKeypoint.new(0.5, C.frost),
+    ColorSequenceKeypoint.new(1,   C.ice2),
+})
+TitleGrad.Rotation = 0
+TitleGrad.Parent   = TitleLabel
+
+local SubLabel = Instance.new("TextLabel")
+SubLabel.Size                 = UDim2.new(1, 0, 0, 16)
+SubLabel.Position             = UDim2.new(0, 0, 0, 38)
+SubLabel.BackgroundTransparency = 1
+SubLabel.Text                 = "by zxc_auraic  (Claude Sonnet 4.6)"
+SubLabel.TextColor3           = C.subtext
+SubLabel.TextSize             = 10
+SubLabel.Font                 = Enum.Font.Gotham
+SubLabel.Parent               = Frame
+
+local Divider = Instance.new("Frame")
+Divider.Size             = UDim2.new(0.85, 0, 0, 1)
+Divider.Position         = UDim2.new(0.075, 0, 0, 58)
+Divider.BackgroundColor3 = C.ice1
+Divider.BackgroundTransparency = 0.55
+Divider.BorderSizePixel  = 0
+Divider.Parent           = Frame
+Instance.new("UICorner", Divider).CornerRadius = UDim.new(1,0)
+
+local InputBox = Instance.new("TextBox")
+InputBox.Size               = UDim2.new(1, -24, 0, 34)
+InputBox.Position           = UDim2.new(0, 12, 0, 68)
+InputBox.BackgroundColor3   = C.inputBg
+InputBox.BackgroundTransparency = 0.1
+InputBox.TextColor3         = C.text
+InputBox.PlaceholderText    = "유저 이름 입력..."
+InputBox.PlaceholderColor3  = C.subtext
+InputBox.Text               = ""
+InputBox.TextSize           = 13
+InputBox.Font               = Enum.Font.Gotham
+InputBox.ClearTextOnFocus   = false
+InputBox.BorderSizePixel    = 0
+InputBox.Parent             = Frame
+
+Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 8)
+
+local InputStroke = Instance.new("UIStroke")
+InputStroke.Thickness       = 1
+InputStroke.Color           = C.ice2
+InputStroke.Transparency    = 0.4
+InputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+InputStroke.Parent          = InputBox
+
+local Button = Instance.new("TextButton")
+Button.Size             = UDim2.new(1, -24, 0, 36)
+Button.Position         = UDim2.new(0, 12, 0, 112)
+Button.BackgroundColor3 = Color3.fromRGB(50, 80, 150)
+Button.TextColor3       = C.frost
+Button.Text             = "  스푸핑 시작"
+Button.TextSize         = 13
+Button.Font             = Enum.Font.GothamBold
+Button.BorderSizePixel  = 0
+Button.Parent           = Frame
+
+Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
+
+local BtnGrad = Instance.new("UIGradient")
+BtnGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,   Color3.fromRGB( 60, 100, 200)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB( 90, 150, 255)),
+    ColorSequenceKeypoint.new(1,   Color3.fromRGB(130, 100, 220)),
+})
+BtnGrad.Rotation = 0
+BtnGrad.Parent   = Button
+
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Thickness       = 1
+BtnStroke.Color           = C.accent
+BtnStroke.Transparency    = 0.3
+BtnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+BtnStroke.Parent          = Button
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size                  = UDim2.new(1, 0, 0, 20)
+StatusLabel.Position              = UDim2.new(0, 0, 0, 156)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text                  = "대기 중"
+StatusLabel.TextColor3            = C.subtext
+StatusLabel.TextSize              = 11
+StatusLabel.Font                  = Enum.Font.Gotham
+StatusLabel.Parent                = Frame
+
+local function makeDiamond(parent, x, y, size, col)
+    local d = Instance.new("Frame")
+    d.Size             = UDim2.new(0, size, 0, size)
+    d.Position         = UDim2.new(0, x, 0, y)
+    d.BackgroundColor3 = col
+    d.BackgroundTransparency = 0.3
+    d.BorderSizePixel  = 0
+    d.Rotation         = 45
+    d.Parent           = parent
+    Instance.new("UICorner", d).CornerRadius = UDim.new(0, 2)
+    return d
+end
+
+makeDiamond(Frame,  -5,  -5,  10, C.ice1)
+makeDiamond(Frame, 295,  -5,  10, C.ice2)
+makeDiamond(Frame,  -5, 195,   8, C.ice2)
+makeDiamond(Frame, 296, 195,   8, C.ice1)
+
+do
+    local dragging, dragStart, startPos
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = input.Position
+            startPos  = Frame.Position
+        end
+    end)
+    Frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement or
+            input.UserInputType == Enum.UserInputType.Touch) then
+            local d = input.Position - dragStart
+            Frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y)
+        end
+    end)
+end
+
+local t = 0
+RunService.Heartbeat:Connect(function(dt)
+    t = t + dt
+    local lerpT = (math.sin(t * 1.2) + 1) / 2
+    Stroke.Color = C.ice1:Lerp(C.ice2, lerpT)
+    BtnGrad.Rotation = (t * 25) % 360
+    TitleGrad.Rotation = (t * 15) % 360
+    BtnStroke.Transparency = 0.2 + 0.4 * ((math.sin(t * 2) + 1) / 2)
+    InputStroke.Transparency = 0.3 + 0.4 * ((math.sin(t * 1.8 + 1) + 1) / 2)
+end)
+
+Button.MouseButton1Click:Connect(function()
+    if spoofActive then
+        StopSpoof()
+        Button.Text = "  스푸핑 시작"
+        BtnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,   Color3.fromRGB( 60, 100, 200)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB( 90, 150, 255)),
+            ColorSequenceKeypoint.new(1,   Color3.fromRGB(130, 100, 220)),
+        })
+        StatusLabel.Text       = "중지됨"
+        StatusLabel.TextColor3 = C.off
+    else
+        local username = InputBox.Text
+        if username == "" then
+            StatusLabel.Text       = "유저 이름을 입력하세요!"
+            StatusLabel.TextColor3 = C.off
+            return
+        end
+        StartSpoof(username)
+        Button.Text = "  스푸핑 중지"
+        BtnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,   Color3.fromRGB( 40, 160, 200)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB( 80, 220, 200)),
+            ColorSequenceKeypoint.new(1,   Color3.fromRGB( 40, 200, 160)),
+        })
+        StatusLabel.Text       = "적용 중: " .. username
+        StatusLabel.TextColor3 = C.on
+    end
+end)
