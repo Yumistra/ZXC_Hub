@@ -1,0 +1,709 @@
+-- OrbitScript (LocalScript)
+-- StarterPlayerScripts 안에 배치
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- =====================
+-- CoreGui에 숨기기
+-- =====================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "OrbitGui"
+screenGui.ResetOnSpawn = false
+screenGui.Archivable = false
+
+local ok = pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
+if not ok then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+-- =====================
+-- 토글 버튼
+-- =====================
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 40, 0, 40)
+toggleButton.Position = UDim2.new(0, 20, 0.5, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Text = "="
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 20
+toggleButton.BorderSizePixel = 0
+toggleButton.Archivable = false
+toggleButton.Parent = screenGui
+
+local tc = Instance.new("UICorner")
+tc.CornerRadius = UDim.new(0, 8)
+tc.Parent = toggleButton
+
+-- =====================
+-- 메인 패널
+-- =====================
+local panel = Instance.new("Frame")
+panel.Size = UDim2.new(0, 260, 0, 320)
+panel.Position = UDim2.new(0, 70, 0.5, -160)
+panel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+panel.BorderSizePixel = 0
+panel.Archivable = false
+panel.Visible = true
+panel.Parent = screenGui
+
+local pc = Instance.new("UICorner")
+pc.CornerRadius = UDim.new(0, 12)
+pc.Parent = panel
+
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = panel
+
+local tbc = Instance.new("UICorner")
+tbc.CornerRadius = UDim.new(0, 12)
+tbc.Parent = titleBar
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -10, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Orbit Manager"
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 15
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = titleBar
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -20, 0, 28)
+statusLabel.Position = UDim2.new(0, 10, 0, 48)
+statusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+statusLabel.BorderSizePixel = 0
+statusLabel.Text = "대기중"
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 13
+statusLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Archivable = false
+statusLabel.Parent = panel
+
+local slc = Instance.new("UICorner")
+slc.CornerRadius = UDim.new(0, 6)
+slc.Parent = statusLabel
+
+local slpad = Instance.new("UIPadding")
+slpad.PaddingLeft = UDim.new(0, 8)
+slpad.Parent = statusLabel
+
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Size = UDim2.new(1, -20, 0, 20)
+timerLabel.Position = UDim2.new(0, 10, 0, 84)
+timerLabel.BackgroundTransparency = 1
+timerLabel.Text = ""
+timerLabel.Font = Enum.Font.GothamBold
+timerLabel.TextSize = 12
+timerLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+timerLabel.TextXAlignment = Enum.TextXAlignment.Center
+timerLabel.Archivable = false
+timerLabel.Parent = panel
+
+local allOrbitBtn = Instance.new("TextButton")
+allOrbitBtn.Size = UDim2.new(1, -20, 0, 34)
+allOrbitBtn.Position = UDim2.new(0, 10, 0, 110)
+allOrbitBtn.BackgroundColor3 = Color3.fromRGB(140, 60, 200)
+allOrbitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+allOrbitBtn.Text = "전체 오빗 시작"
+allOrbitBtn.Font = Enum.Font.GothamBold
+allOrbitBtn.TextSize = 14
+allOrbitBtn.BorderSizePixel = 0
+allOrbitBtn.Archivable = false
+allOrbitBtn.Parent = panel
+
+local aobc = Instance.new("UICorner")
+aobc.CornerRadius = UDim.new(0, 8)
+aobc.Parent = allOrbitBtn
+
+-- =====================
+-- 텍스트 입력
+-- =====================
+local ORBIT_SPEED = 90
+local ORBIT_DISTANCE = 8
+local ORBIT_MAX_TIME = 10
+
+local function CreateInput(yPos, label, defaultVal, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 0, 36)
+    container.Position = UDim2.new(0, 10, 0, yPos)
+    container.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+    container.BorderSizePixel = 0
+    container.Parent = panel
+
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0, 8)
+    cc.Parent = container
+
+    local labelText = Instance.new("TextLabel")
+    labelText.Size = UDim2.new(0.55, 0, 1, 0)
+    labelText.Position = UDim2.new(0, 10, 0, 0)
+    labelText.BackgroundTransparency = 1
+    labelText.Font = Enum.Font.GothamBold
+    labelText.TextSize = 12
+    labelText.TextColor3 = Color3.fromRGB(180, 180, 180)
+    labelText.TextXAlignment = Enum.TextXAlignment.Left
+    labelText.Text = label
+    labelText.Parent = container
+
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(0.38, 0, 0, 24)
+    inputBox.Position = UDim2.new(0.58, 0, 0.5, -12)
+    inputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.Text = tostring(defaultVal)
+    inputBox.Font = Enum.Font.GothamBold
+    inputBox.TextSize = 13
+    inputBox.BorderSizePixel = 0
+    inputBox.ClearTextOnFocus = false
+    inputBox.Parent = container
+
+    local ibc = Instance.new("UICorner")
+    ibc.CornerRadius = UDim.new(0, 6)
+    ibc.Parent = inputBox
+
+    inputBox.FocusLost:Connect(function()
+        local val = tonumber(inputBox.Text)
+        if val ~= nil then
+            callback(val)
+        else
+            inputBox.Text = tostring(defaultVal)
+        end
+    end)
+end
+
+CreateInput(152, "속도 (도/초)", 90, function(val) ORBIT_SPEED = val end)
+CreateInput(196, "거리 (스터즈)", 8, function(val) ORBIT_DISTANCE = val end)
+CreateInput(240, "교체 시간 (초)", 10, function(val) ORBIT_MAX_TIME = val end)
+
+-- =====================
+-- 플레이어 목록 패널 (오른쪽)
+-- =====================
+local playerPanel = Instance.new("Frame")
+playerPanel.Size = UDim2.new(0, 220, 0, 320)
+playerPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+playerPanel.BorderSizePixel = 0
+playerPanel.Archivable = false
+playerPanel.Visible = true
+playerPanel.Parent = screenGui
+
+local ppc = Instance.new("UICorner")
+ppc.CornerRadius = UDim.new(0, 12)
+ppc.Parent = playerPanel
+
+local playerTitleBar = Instance.new("Frame")
+playerTitleBar.Size = UDim2.new(1, 0, 0, 40)
+playerTitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+playerTitleBar.BorderSizePixel = 0
+playerTitleBar.Parent = playerPanel
+
+local ptbc = Instance.new("UICorner")
+ptbc.CornerRadius = UDim.new(0, 12)
+ptbc.Parent = playerTitleBar
+
+local playerTitleLabel = Instance.new("TextLabel")
+playerTitleLabel.Size = UDim2.new(1, -10, 1, 0)
+playerTitleLabel.Position = UDim2.new(0, 10, 0, 0)
+playerTitleLabel.BackgroundTransparency = 1
+playerTitleLabel.Text = "플레이어"
+playerTitleLabel.Font = Enum.Font.GothamBold
+playerTitleLabel.TextSize = 14
+playerTitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+playerTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerTitleLabel.Parent = playerTitleBar
+
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1, -16, 1, -50)
+scrollFrame.Position = UDim2.new(0, 8, 0, 46)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 4
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scrollFrame.Parent = playerPanel
+
+local sfc = Instance.new("UICorner")
+sfc.CornerRadius = UDim.new(0, 8)
+sfc.Parent = scrollFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 4)
+listLayout.Parent = scrollFrame
+
+local listPad = Instance.new("UIPadding")
+listPad.PaddingTop = UDim.new(0, 6)
+listPad.PaddingLeft = UDim.new(0, 6)
+listPad.PaddingRight = UDim.new(0, 6)
+listPad.Parent = scrollFrame
+
+local function SyncPlayerPanel()
+    playerPanel.Position = UDim2.new(
+        panel.Position.X.Scale,
+        panel.Position.X.Offset + panel.Size.X.Offset + 8,
+        panel.Position.Y.Scale,
+        panel.Position.Y.Offset
+    )
+end
+
+SyncPlayerPanel()
+
+-- =====================
+-- 드래그
+-- =====================
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = panel.Position
+    end
+end)
+
+titleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or
+       input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        panel.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+        SyncPlayerPanel()
+    end
+end)
+
+toggleButton.MouseButton1Click:Connect(function()
+    panel.Visible = not panel.Visible
+    playerPanel.Visible = panel.Visible
+end)
+
+-- =====================
+-- 리스트 상태
+-- 0 = 없음, 1 = 화이트리스트(제외), 2 = 블랙리스트(대상만)
+-- =====================
+local playerStatus = {}
+
+local function GetStatusColor(status)
+    if status == 1 then return Color3.fromRGB(40, 160, 80)
+    elseif status == 2 then return Color3.fromRGB(200, 60, 60)
+    else return Color3.fromRGB(50, 50, 50) end
+end
+
+local function GetStatusText(status)
+    if status == 1 then return "WL"
+    elseif status == 2 then return "BL"
+    else return "--" end
+end
+
+local function GetStatusNameColor(status)
+    if status == 1 then return Color3.fromRGB(100, 220, 130)
+    elseif status == 2 then return Color3.fromRGB(220, 100, 100)
+    else return Color3.fromRGB(220, 220, 220) end
+end
+
+local function IsOrbitTarget(playerName)
+    local status = playerStatus[playerName] or 0
+    local hasBlacklist = false
+    for _, s in pairs(playerStatus) do
+        if s == 2 then hasBlacklist = true break end
+    end
+    if status == 1 then return false
+    elseif status == 2 then return true
+    else return not hasBlacklist end
+end
+
+-- =====================
+-- Orbit 로직
+-- =====================
+local orbitTarget = nil
+local orbitAngle = 0
+local orbitConnection = nil
+local allOrbitActive = false
+local deathConnection = nil
+local orbitStartTime = 0
+local timerConnection = nil
+local playerEntries = {}
+local savedPosition = nil
+
+local function GetNextTarget(excludePlayer)
+    local candidates = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if excludePlayer and player == excludePlayer then continue end
+        if not IsOrbitTarget(player.Name) then continue end
+        local char = player.Character
+        if not char then continue end
+        local humanoid = char:FindFirstChild("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            table.insert(candidates, player)
+        end
+    end
+    if #candidates == 0 then return nil end
+    return candidates[math.random(1, #candidates)]
+end
+
+local function UpdateAllEntryButtons()
+    for _, e in pairs(playerEntries) do
+        if e.UpdateOrbitBtn then e.UpdateOrbitBtn() end
+    end
+end
+
+local function NotifyOrbitStopped()
+    task.spawn(function()
+        for i = 1, 4 do
+            statusLabel.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+            statusLabel.Text = "오빗 종료됨!"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            task.wait(0.2)
+            statusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            task.wait(0.2)
+        end
+        statusLabel.Text = "대기중"
+        statusLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+        statusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    end)
+end
+
+local function StopOrbit(silent)
+    allOrbitActive = false
+    orbitTarget = nil
+
+    if orbitConnection then orbitConnection:Disconnect() orbitConnection = nil end
+    if deathConnection then deathConnection:Disconnect() deathConnection = nil end
+    if timerConnection then timerConnection:Disconnect() timerConnection = nil end
+
+    local myChar = LocalPlayer.Character
+    local humanoid = myChar and myChar:FindFirstChild("Humanoid")
+    if humanoid then Camera.CameraSubject = humanoid end
+    Camera.CameraType = Enum.CameraType.Custom
+
+    if savedPosition then
+        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        if myRoot then myRoot.CFrame = savedPosition end
+        savedPosition = nil
+    end
+
+    timerLabel.Text = ""
+    allOrbitBtn.Text = "전체 오빗 시작"
+    allOrbitBtn.BackgroundColor3 = Color3.fromRGB(140, 60, 200)
+
+    if not silent then
+        NotifyOrbitStopped()
+    else
+        statusLabel.Text = "대기중"
+        statusLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+    end
+
+    UpdateAllEntryButtons()
+end
+
+local function StartOrbitTarget(targetPlayer, fromAllOrbit)
+    if orbitConnection then orbitConnection:Disconnect() orbitConnection = nil end
+    if deathConnection then deathConnection:Disconnect() deathConnection = nil end
+    if timerConnection then timerConnection:Disconnect() timerConnection = nil end
+
+    local targetChar = targetPlayer.Character
+    if not targetChar then
+        if fromAllOrbit then
+            local next = GetNextTarget(targetPlayer)
+            if next then task.spawn(StartOrbitTarget, next, true) end
+        end
+        return
+    end
+
+    local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+    if not targetHumanoid or not targetRoot then return end
+
+    if not orbitTarget then
+        local myChar = LocalPlayer.Character
+        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        if myRoot then savedPosition = myRoot.CFrame end
+    end
+
+    orbitTarget = targetPlayer
+    orbitAngle = 0
+    orbitStartTime = tick()
+
+    Camera.CameraSubject = targetHumanoid
+    Camera.CameraType = Enum.CameraType.Custom
+
+    local displayName = targetPlayer.DisplayName
+    local showName = displayName ~= targetPlayer.Name
+        and displayName .. "(" .. targetPlayer.Name .. ")"
+        or targetPlayer.Name
+
+    if fromAllOrbit then
+        statusLabel.Text = "전체오빗: " .. showName
+        statusLabel.TextColor3 = Color3.fromRGB(200, 100, 255)
+    else
+        statusLabel.Text = showName .. " 오빗 중"
+        statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    end
+    statusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+
+    UpdateAllEntryButtons()
+
+    deathConnection = targetHumanoid.Died:Connect(function()
+        if fromAllOrbit and allOrbitActive then
+            task.wait(0.3)
+            local next = GetNextTarget(targetPlayer)
+            if next then StartOrbitTarget(next, true) else StopOrbit(false) end
+        elseif not fromAllOrbit then
+            StopOrbit(false)
+        end
+    end)
+
+    if fromAllOrbit then
+        timerConnection = RunService.Heartbeat:Connect(function()
+            if not allOrbitActive then return end
+            local elapsed = tick() - orbitStartTime
+            local remaining = math.ceil(ORBIT_MAX_TIME - elapsed)
+            if remaining > 0 then
+                timerLabel.Text = "교체까지 " .. remaining .. "초"
+            else
+                timerLabel.Text = ""
+                local next = GetNextTarget(orbitTarget)
+                if next then StartOrbitTarget(next, true) else StopOrbit(false) end
+            end
+        end)
+    end
+
+    orbitConnection = RunService.Heartbeat:Connect(function()
+        if not orbitTarget then return end
+        local char = orbitTarget.Character
+        if not char then return end
+        local humanoid = char:FindFirstChild("Humanoid")
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not humanoid or humanoid.Health <= 0 or not root then return end
+        local myChar = LocalPlayer.Character
+        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return end
+
+        orbitAngle = orbitAngle + math.rad(ORBIT_SPEED) / 60
+
+        local rotCFrame = CFrame.Angles(0, orbitAngle, 0)
+        local distOffset = CFrame.new(ORBIT_DISTANCE, 0, 0)
+
+        local predictedPos = Vector3.new(
+            root.Position.X + humanoid.MoveDirection.X * root.AssemblyLinearVelocity.Magnitude / 2.75,
+            root.Position.Y,
+            root.Position.Z + humanoid.MoveDirection.Z * root.AssemblyLinearVelocity.Magnitude / 2.75
+        )
+
+        myRoot.CFrame = CFrame.new(predictedPos) * rotCFrame * distOffset
+    end)
+end
+
+allOrbitBtn.MouseButton1Click:Connect(function()
+    if allOrbitActive then
+        StopOrbit(false)
+    else
+        local target = GetNextTarget(nil)
+        if target then
+            allOrbitActive = true
+            allOrbitBtn.Text = "전체 오빗 중지"
+            allOrbitBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+            StartOrbitTarget(target, true)
+        else
+            statusLabel.Text = "오빗 가능한 플레이어 없음"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 180, 0)
+            task.delay(2, function()
+                if not allOrbitActive then
+                    statusLabel.Text = "대기중"
+                    statusLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+                end
+            end)
+        end
+    end
+end)
+
+-- =====================
+-- 플레이어 리스트
+-- =====================
+local function CreatePlayerEntry(player)
+    if player == LocalPlayer then return end
+
+    local entry = Instance.new("Frame")
+    entry.Size = UDim2.new(1, 0, 0, 62)
+    entry.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+    entry.BorderSizePixel = 0
+    entry.Parent = scrollFrame
+
+    local ec = Instance.new("UICorner")
+    ec.CornerRadius = UDim.new(0, 8)
+    ec.Parent = entry
+
+    -- 디스플레이 이름
+    local displayLabel = Instance.new("TextLabel")
+    displayLabel.Size = UDim2.new(1, -120, 0, 28)
+    displayLabel.Position = UDim2.new(0, 8, 0, 4)
+    displayLabel.BackgroundTransparency = 1
+    displayLabel.Font = Enum.Font.GothamBold
+    displayLabel.TextSize = 13
+    displayLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    displayLabel.TextXAlignment = Enum.TextXAlignment.Left
+    displayLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    displayLabel.Parent = entry
+
+    -- 유저 이름 (작게)
+    local usernameLabel = Instance.new("TextLabel")
+    usernameLabel.Size = UDim2.new(1, -120, 0, 20)
+    usernameLabel.Position = UDim2.new(0, 8, 0, 34)
+    usernameLabel.BackgroundTransparency = 1
+    usernameLabel.Font = Enum.Font.Gotham
+    usernameLabel.TextSize = 11
+    usernameLabel.TextColor3 = Color3.fromRGB(140, 140, 140)
+    usernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    usernameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    usernameLabel.Parent = entry
+
+    -- 이름 설정
+    local displayName = player.DisplayName
+    if displayName ~= player.Name then
+        displayLabel.Text = displayName
+        usernameLabel.Text = "@" .. player.Name
+    else
+        displayLabel.Text = player.Name
+        usernameLabel.Text = ""
+    end
+
+    -- 오빗 버튼
+    local orbitBtn = Instance.new("TextButton")
+    orbitBtn.Size = UDim2.new(0, 44, 0, 28)
+    orbitBtn.Position = UDim2.new(1, -108, 0.5, -14)
+    orbitBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
+    orbitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    orbitBtn.Text = "GO"
+    orbitBtn.Font = Enum.Font.GothamBold
+    orbitBtn.TextSize = 11
+    orbitBtn.BorderSizePixel = 0
+    orbitBtn.Parent = entry
+
+    local obc = Instance.new("UICorner")
+    obc.CornerRadius = UDim.new(0, 6)
+    obc.Parent = orbitBtn
+
+    -- 리스트 버튼
+    local listBtn = Instance.new("TextButton")
+    listBtn.Size = UDim2.new(0, 56, 0, 28)
+    listBtn.Position = UDim2.new(1, -58, 0.5, -14)
+    listBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    listBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    listBtn.Text = "--"
+    listBtn.Font = Enum.Font.GothamBold
+    listBtn.TextSize = 11
+    listBtn.BorderSizePixel = 0
+    listBtn.Parent = entry
+
+    local lbc = Instance.new("UICorner")
+    lbc.CornerRadius = UDim.new(0, 6)
+    lbc.Parent = listBtn
+
+    playerStatus[player.Name] = playerStatus[player.Name] or 0
+
+    local function UpdateListBtn()
+        local status = playerStatus[player.Name] or 0
+        listBtn.BackgroundColor3 = GetStatusColor(status)
+        listBtn.Text = GetStatusText(status)
+        local nameColor = GetStatusNameColor(status)
+        displayLabel.TextColor3 = nameColor
+        usernameLabel.TextColor3 = status == 0
+            and Color3.fromRGB(140, 140, 140)
+            or nameColor
+    end
+
+    local function UpdateOrbitBtn()
+        if orbitTarget == player and not allOrbitActive then
+            orbitBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+            orbitBtn.Text = "STOP"
+        elseif orbitTarget == player and allOrbitActive then
+            orbitBtn.BackgroundColor3 = Color3.fromRGB(180, 80, 255)
+            orbitBtn.Text = "GO"
+        else
+            orbitBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
+            orbitBtn.Text = "GO"
+        end
+    end
+
+    listBtn.MouseButton1Click:Connect(function()
+        local current = playerStatus[player.Name] or 0
+        playerStatus[player.Name] = (current + 1) % 3
+        UpdateListBtn()
+    end)
+
+    orbitBtn.MouseButton1Click:Connect(function()
+        if allOrbitActive then return end
+        if orbitTarget == player then
+            StopOrbit(false)
+        else
+            StartOrbitTarget(player, false)
+        end
+        UpdateAllEntryButtons()
+    end)
+
+    UpdateListBtn()
+    UpdateOrbitBtn()
+
+    playerEntries[player.Name] = {
+        entry = entry,
+        UpdateListBtn = UpdateListBtn,
+        UpdateOrbitBtn = UpdateOrbitBtn,
+    }
+end
+
+local function RemovePlayerEntry(player)
+    if playerEntries[player.Name] then
+        playerEntries[player.Name].entry:Destroy()
+        playerEntries[player.Name] = nil
+    end
+    playerStatus[player.Name] = nil
+    if orbitTarget == player then
+        if allOrbitActive then
+            local next = GetNextTarget(player)
+            if next then StartOrbitTarget(next, true) else StopOrbit(false) end
+        else
+            StopOrbit(false)
+        end
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    CreatePlayerEntry(player)
+end
+
+Players.PlayerAdded:Connect(CreatePlayerEntry)
+Players.PlayerRemoving:Connect(RemovePlayerEntry)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    if orbitTarget and not allOrbitActive then
+        StartOrbitTarget(orbitTarget, false)
+    elseif allOrbitActive then
+        local next = GetNextTarget(nil)
+        if next then StartOrbitTarget(next, true) end
+    end
+end)
+
+print("[Orbit] 스크립트 로드 완료!")
