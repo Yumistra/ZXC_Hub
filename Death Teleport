@@ -1,0 +1,59 @@
+--[[  
+
+     Death Teleport | 사망 위치 복귀
+
+  ]]
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+getgenv().DeathReturnEnabled = true
+
+if getgenv().DeathReturnConnections then
+    for _, conn in ipairs(getgenv().DeathReturnConnections) do
+        if conn.Connected then conn:Disconnect() end
+    end
+end
+getgenv().DeathReturnConnections = {}
+getgenv().LastDeathPosition = nil
+
+local Connections = getgenv().DeathReturnConnections
+
+local function HandleCharacter(character)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if not humanoid then return end
+
+    local diedConn = humanoid.Died:Connect(function()
+        if not getgenv().DeathReturnEnabled then return end
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root then
+            getgenv().LastDeathPosition = root.CFrame
+        end
+    end)
+    table.insert(Connections, diedConn)
+end
+
+local function HandleRespawn(character)
+    if not getgenv().DeathReturnEnabled then return end
+    if not getgenv().LastDeathPosition then return end
+
+    local root = character:WaitForChild("HumanoidRootPart", 5)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if not root or not humanoid then return end
+
+    task.wait(0.05)
+
+    if getgenv().DeathReturnEnabled and humanoid.Health > 0 and root.Parent then
+        root.CFrame = getgenv().LastDeathPosition
+    end
+end
+
+if LocalPlayer.Character then
+    HandleCharacter(LocalPlayer.Character)
+end
+
+local addedConn = LocalPlayer.CharacterAdded:Connect(function(character)
+    HandleRespawn(character)
+    HandleCharacter(character)
+end)
+table.insert(Connections, addedConn)
