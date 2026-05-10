@@ -41,7 +41,7 @@ local function HandleRespawn(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if not root or not humanoid then return end
 
-    task.wait(0.05)
+    task.wait(0.1)
 
     if getgenv().DeathReturnEnabled and humanoid.Health > 0 and root.Parent then
         root.CFrame = getgenv().LastDeathPosition
