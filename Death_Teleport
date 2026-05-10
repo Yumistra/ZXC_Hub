@@ -6,6 +6,7 @@
   ]]
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 getgenv().DeathReturnEnabled = true
@@ -25,22 +26,42 @@ local function HookDeath(character)
     local root = character:WaitForChild("HumanoidRootPart", 5)
     if not humanoid or not root then return end
 
-    local conn = humanoid.HealthChanged:Connect(function(health)
+    local healthConn = humanoid.HealthChanged:Connect(function(health)
         if health <= 0 and getgenv().DeathReturnEnabled then
+            if root and root.Parent then
+                getgenv().LastDeathPosition = root.CFrame
+            end
+        end
+    end)
+    table.insert(Connections, healthConn)
+
+    local diedConn = humanoid.Died:Connect(function()
+        if getgenv().DeathReturnEnabled and root and root.Parent then
             getgenv().LastDeathPosition = root.CFrame
         end
     end)
-    table.insert(Connections, conn)
+    table.insert(Connections, diedConn)
 end
 
 local function OnRespawn(character)
     if not getgenv().DeathReturnEnabled then return end
     if not getgenv().LastDeathPosition then return end
 
-    local root = character:WaitForChild("HumanoidRootPart", 15)
-    if not root then return end
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    local root = character:WaitForChild("HumanoidRootPart", 5)
+    if not humanoid or not root then return end
 
-    root.CFrame = getgenv().LastDeathPosition
+    repeat task.wait() until root.Parent and humanoid.RootPart == root
+
+    local targetCFrame = getgenv().LastDeathPosition
+    local startTime = tick()
+
+    while tick() - startTime < 0.5 do
+        if not getgenv().DeathReturnEnabled then break end
+        if not root.Parent or humanoid.Health <= 0 then break end
+        root.CFrame = targetCFrame
+        RunService.Heartbeat:Wait()
+    end
 end
 
 if LocalPlayer.Character then
@@ -48,7 +69,7 @@ if LocalPlayer.Character then
 end
 
 local addedConn = LocalPlayer.CharacterAdded:Connect(function(character)
-    OnRespawn(character)
+    task.spawn(OnRespawn, character)
     HookDeath(character)
 end)
 table.insert(Connections, addedConn)
