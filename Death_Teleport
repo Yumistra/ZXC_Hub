@@ -6,7 +6,6 @@
   ]]
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 getgenv().DeathReturnEnabled = true
@@ -26,41 +25,25 @@ local function HookDeath(character)
     local root = character:WaitForChild("HumanoidRootPart", 5)
     if not humanoid or not root then return end
 
-    local healthConn = humanoid.HealthChanged:Connect(function(health)
+    local conn = humanoid.HealthChanged:Connect(function(health)
         if health <= 0 and getgenv().DeathReturnEnabled then
-            if root and root.Parent then
-                getgenv().LastDeathPosition = root.CFrame
-            end
-        end
-    end)
-    table.insert(Connections, healthConn)
-
-    local diedConn = humanoid.Died:Connect(function()
-        if getgenv().DeathReturnEnabled and root and root.Parent then
             getgenv().LastDeathPosition = root.CFrame
         end
     end)
-    table.insert(Connections, diedConn)
+    table.insert(Connections, conn)
 end
 
 local function OnRespawn(character)
     if not getgenv().DeathReturnEnabled then return end
     if not getgenv().LastDeathPosition then return end
 
-    local humanoid = character:WaitForChild("Humanoid", 5)
     local root = character:WaitForChild("HumanoidRootPart", 5)
-    if not humanoid or not root then return end
+    if not root then return end
 
-    repeat task.wait() until root.Parent and humanoid.RootPart == root
+    task.wait(0.2)
 
-    local targetCFrame = getgenv().LastDeathPosition
-    local startTime = tick()
-
-    while tick() - startTime < 0.5 do
-        if not getgenv().DeathReturnEnabled then break end
-        if not root.Parent or humanoid.Health <= 0 then break end
-        root.CFrame = targetCFrame
-        RunService.Heartbeat:Wait()
+    if getgenv().DeathReturnEnabled and root.Parent then
+        root.CFrame = getgenv().LastDeathPosition
     end
 end
 
