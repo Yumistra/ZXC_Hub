@@ -1,6 +1,7 @@
 --[[  
 
      Death Teleport | 사망 위치 복귀
+     by ZXC's Hub
 
   ]]
 
@@ -19,41 +20,35 @@ getgenv().LastDeathPosition = nil
 
 local Connections = getgenv().DeathReturnConnections
 
-local function HandleCharacter(character)
+local function HookDeath(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
-    if not humanoid then return end
+    local root = character:WaitForChild("HumanoidRootPart", 5)
+    if not humanoid or not root then return end
 
-    local diedConn = humanoid.Died:Connect(function()
-        if not getgenv().DeathReturnEnabled then return end
-        local root = character:FindFirstChild("HumanoidRootPart")
-        if root then
+    local conn = humanoid.HealthChanged:Connect(function(health)
+        if health <= 0 and getgenv().DeathReturnEnabled then
             getgenv().LastDeathPosition = root.CFrame
         end
     end)
-    table.insert(Connections, diedConn)
+    table.insert(Connections, conn)
 end
 
-local function HandleRespawn(character)
+local function OnRespawn(character)
     if not getgenv().DeathReturnEnabled then return end
     if not getgenv().LastDeathPosition then return end
 
     local root = character:WaitForChild("HumanoidRootPart", 5)
-    local humanoid = character:WaitForChild("Humanoid", 5)
-    if not root or not humanoid then return end
+    if not root then return end
 
-    task.wait(0.15)
-
-    if getgenv().DeathReturnEnabled and humanoid.Health > 0 and root.Parent then
-        root.CFrame = getgenv().LastDeathPosition
-    end
+    root.CFrame = getgenv().LastDeathPosition
 end
 
 if LocalPlayer.Character then
-    HandleCharacter(LocalPlayer.Character)
+    HookDeath(LocalPlayer.Character)
 end
 
 local addedConn = LocalPlayer.CharacterAdded:Connect(function(character)
-    HandleRespawn(character)
-    HandleCharacter(character)
+    OnRespawn(character)
+    HookDeath(character)
 end)
 table.insert(Connections, addedConn)
