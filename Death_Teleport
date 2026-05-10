@@ -37,7 +37,7 @@ local function OnRespawn(character)
     if not getgenv().DeathReturnEnabled then return end
     if not getgenv().LastDeathPosition then return end
 
-    local root = character:WaitForChild("HumanoidRootPart", 5)
+    local root = character:WaitForChild("HumanoidRootPart", 15)
     if not root then return end
 
     root.CFrame = getgenv().LastDeathPosition
